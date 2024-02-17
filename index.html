@@ -1,0 +1,427 @@
+                        <!DOCTYPE html>
+                        <html lang="en">
+
+
+                        <head>
+                            <meta charset="UTF-8">
+
+                            <title>Task Manager</title>
+                            <link rel="stylesheet" href="index.css">
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.js"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.3.3/backbone-min.js"></script>
+                            <script src="/node_modules/backbone.radio/build/backbone.radio.min.js"></script>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.marionette/2.4.7/backbone.marionette.min.js"></script>
+
+
+
+                        <!--    https://cdnjs.cloudflare.com/ajax/libs/backbone.marionette/2.4.7/backbone.marionette.min.js-->
+
+
+
+                        </head>
+
+
+                        <body>
+
+
+                        <div id="app-container"></div>
+                        <div id="header"></div>
+                        <div id="controller">
+                            <div id="option_button_region"></div>
+                            <div id="create_button_region"></div>
+                        </div>
+                        <div id="table"></div>
+
+                        <script>
+
+                            var MyApp = new Marionette.Application();
+
+
+
+
+                          const HeaderView = Marionette.ItemView.extend({
+                              template: _.template(`
+                                  <div class="header">
+                                      <img src="https://companieslogo.com/img/orig/OTEX_BIG.D-b3172504.png?t=1649019030" alt="opentext Logo" width="200">
+                                      <div class="header-right">
+                                          <a class="active" href="#home">Home</a>
+                                          <a  href="#contact">Contact</a>
+                                          <a  href="#about">About</a>
+                                      </div>
+                                  </div>
+
+                              `)
+                          });
+
+
+
+                             var CreateTaskLayout = Marionette.ItemView.extend({
+                            template: _.template(`
+                                <button id="createTaskButton">
+                                    <span>+</span> Create Task
+                                </button>
+                                <div id="overlay"></div>
+                                <div id="createTaskModal">
+                                    <h2>Create Task</h2>
+                                    <form id="createTaskForm">
+                                        <label for="taskTitle">Task Title:</label>
+                                        <input type="text" id="taskTitle" name="taskTitle" required>
+                                        <br>
+                                        <label for="taskDescription">Description:</label>
+                                        <textarea id="taskDescription" name="taskDescription" rows="3" required></textarea>
+                                        <br>
+                                         <label for="taskAssignedTo">Task Assigned :</label>
+                                        <input type="text" id="taskAssignedTo" name="taskAssignedTo" required>
+
+                                        <br>
+                                         <label for="taskDueBy">Due Date :</label>
+                                        <input type="date" id="taskDueBy" name="taskDueBy" required>
+
+                                        <br>
+                                         <label for="taskPriority"> Priority:</label>
+                                       <select name="taskPriority" id="taskPriority">
+                                          <option value="HIGH">High</option>
+                                          <option value="LOW">Low</option>
+
+                                        </select>
+                                            <br>
+                                         <label for="taskCategory">Category :</label>
+                                         <select name="taskCategory" id="taskCategory">
+                                          <option value="WORK">Work</option>
+                                          <option value="PERSONAL">Personal</option>
+
+                                        </select>
+                                        <br>
+
+                                         <label for="taskNotificationType">Notification Type:</label>
+                                        <select name="taskNotificationType" id="taskNotificationType">
+                                          <option value="EMAIL">Email</option>
+                                          <option value="PUSH">Push</option>
+                                          </select>
+                                        <br>
+
+                                        <label for="taskReminderSettings">Reminder :</label>
+                                        <input type="text" id="taskReminderSettings" name="taskReminderSettings" required>
+
+
+                                        <br>
+
+
+                                    <button id="closeCreateTaskModal">Close</button>
+                                    <button type="submit">Create Task</button>
+                                    </form>
+                                </div>
+                            `),
+
+                            ui: {
+                                createTaskButton: '#createTaskButton',
+                                closeCreateTaskModalButton: '#closeCreateTaskModal',
+                                createTaskForm: '#createTaskForm',
+                               taskTitleInput: '#taskTitle',
+                               taskDescriptionInput: '#taskDescription',
+                                taskAssignedToInput: '#taskAssignedTo',
+                                taskDueByInput: '#taskDueBy',
+                                taskPriorityInput: '#taskPriority',
+                                taskCategoryInput: '#taskCategory',
+                                taskNotificationTypeInput: '#taskNotificationType',
+                                taskReminderSettingsInput: '#taskReminderSettings',
+
+                            },
+
+                            triggers: {
+                                'click @ui.createTaskButton': 'openCreateTaskModal',
+                                'click @ui.closeCreateTaskModalButton': 'closeCreateTaskModal'
+                            },
+
+                            events: {
+                                'submit @ui.createTaskForm': 'onCreateTaskFormSubmit'
+                            },
+                            destroy: function() {
+        this.$el.empty();
+        this.stopListening();
+    },
+
+
+
+                            onCreateTaskFormSubmit: function (e) {
+                                 e.preventDefault();
+
+                                var taskData = {
+                                    taskId:"",
+                                    taskTitle: this.ui.taskTitleInput.val(),
+                                    taskDescription: this.ui.taskDescriptionInput.val(),
+                                    taskDueBy: this.ui.taskDueByInput.val(),
+                                    taskAssignedTo: this.ui.taskAssignedToInput.val(),
+                                    taskStatus: "NOT_STARTED",
+                                     taskPriority: this.ui.taskPriorityInput.val(),
+                                      taskCategory: this.ui.taskCategoryInput.val(),
+                                       taskNotificationType: this.ui.taskNotificationTypeInput.val(),
+                                        taskReminderSettings: this.ui.taskReminderSettingsInput.val(),
+                                        taskCreatedAt: "",
+                                        taskUpdatedAt: "",
+
+
+
+
+
+                                };
+
+
+                        console.log(taskData);
+var createTaskLayout = new CreateTaskLayout();
+                                $.ajax({
+                                    url: 'http://localhost:8080/api/v1/tasks',
+                                    method: 'POST',
+                                    data: JSON.stringify(taskData),
+                                    contentType: 'application/json',
+                                    success: function (response) {
+
+                                    console.log(response);
+
+                        console.log('Task created successfully:', response);
+                                            alert('Task created successfully!');
+                             MyApp.trigger('refreshTaskCollectionView', 'allTask');
+
+
+                             createTaskLayout.destroy();
+
+
+
+                                    },
+                                    error: function (error) {
+
+                                        console.error('Error creating task:', error);
+                                    }
+                                });
+                            }
+                        });
+
+
+
+
+
+
+                const DropdownView = Marionette.ItemView.extend({
+                  template: _.template(`
+                    <div class="dropdown">
+                      <select id="statusFilter">
+                        <option value="allTask">All Task</option>
+                        <option value="NOT_STARTED">Not Started</option>
+                        <option value="IN_PROGRESS">Progress</option>
+                        <option value="COMPLETED">Complete</option>
+                      </select>
+                      <div class="nested-dropdown"></div>
+                    </div>
+                  `),
+                  regions: {
+                    nestedDropdownRegion: '.nested-dropdown'
+                  },
+                  events: {
+                    'change #statusFilter': 'filterTasks'
+                  },
+
+                  filterTasks: function () {
+                    const selectedStatus = this.$('#statusFilter').val();
+                    Backbone.trigger('filter:tasks', selectedStatus);
+                  }
+                });
+
+                const TaskCollection = Backbone.Collection.extend({
+                  url: 'http://localhost:8080/api/v1/tasks',
+                  filterByStatus: function (status) {
+                    if (status === 'allTask') {
+                      this.url = 'http://localhost:8080/api/v1/tasks';
+                    } else {
+                      this.url = `http://localhost:8080/api/v1/tasks/status?status=${status}`;
+                    }
+                    this.fetch();
+                  }
+                });
+
+                const TaskItemView = Marionette.ItemView.extend({
+                  tagName: 'tr',
+                  template: _.template(`
+                    <td id="task-id"><span><%= taskId %></span></td>
+                    <td><%= taskTitle %></td>
+                    <td><%= taskAssignedTo %></td>
+                    <td><%= taskStatus %></td>
+                    <td><%= taskDueBy %></td>
+                    <td><div id="button_controls">
+                                       <button id="image_button" class="button">
+                                          <a href="">
+                                              <img src="Assets/show.png" width="30" height="20" />
+                                          </a>
+                                        </button>
+                                         <button id="image_button" class="button">
+                                          <a href="">
+                                              <img src="Assets/sync.png" width="30" height="20" />
+                                          </a>
+                                        </button>
+                                         <button id="delete-button" class="button">
+                                          <a href="">
+                                              <img src="Assets/delete.png" width="30" height="20" />
+                                          </a>
+                                        </button>
+                                    </div>
+                               </td>
+                  `),
+
+                   events: {
+    'click #delete-button': 'deleteItem',
+    'click #update-button': 'updateItem'
+    },
+
+    deleteItem: function(event) {
+        var itemToDelete = $(event.currentTarget).closest('tr').find('#task-id').text();
+
+        $.ajax({
+                url: 'http://localhost:8080/api/v1/tasks/'+itemToDelete,
+                type: 'DELETE',
+                contentType: 'application/json',
+                success: function(response) {
+                console.log(response);
+                },
+                error: function(error) {
+                console.error(error.responseText);
+                }
+        });
+        console.log(itemToDelete);
+    }
+
+                });
+                const TaskCollectionView = Marionette.CollectionView.extend({
+                    tagName: 'tbody',
+                    childView: TaskItemView,
+                });
+
+
+                // TaskLayout
+                const TaskLayout = Marionette.LayoutView.extend({
+                  template: _.template(`
+                    <div>
+                      <div id="dropdownRegion"></div>
+                      <table id="taskTable"></table>
+                    </div>
+                  `),
+
+                  regions: {
+                    dropdownRegion: '#dropdownRegion',
+                    taskListRegion: '#taskTable',
+                  },
+
+                  initialize: function () {
+                    this.listenTo(Backbone, 'filter:tasks', this.filterTasks);
+                    this.listenTo(MyApp, 'refreshTaskCollectionView', this.refreshTaskCollectionView);
+                  },
+                   refreshTaskCollectionView: function (status) {
+                    this.showTaskCollectionView(status);
+                    },
+
+                  onRender: function () {
+                    const dropdownView = new DropdownView();
+                    this.dropdownRegion.show(dropdownView);
+
+                    this.showTaskCollectionView('allTask');
+                  },
+
+                  filterTasks: function (status) {
+                    this.showTaskCollectionView(status);
+                  },
+
+                  showTaskCollectionView: function (status) {
+                    const taskCollection = new TaskCollection();
+
+                    taskCollection.fetch({
+                      success: () => {
+                        taskCollection.filterByStatus(status);
+
+                        const taskCollectionView = new TaskCollectionView({
+                          collection: taskCollection,
+                        });
+
+                        this.taskListRegion.show(taskCollectionView);
+
+                        // Manually append thead and tbody after rendering
+                        this.$el.find('#taskTable').prepend(`
+                          <thead>
+                            <tr>
+                              <th>Task ID</th>
+                              <th>Title</th>
+                              <th>Assigned</th>
+                              <th>Status</th>
+                              <th>Due Date</th>
+                              <th>Options</th>
+                            </tr>
+                          </thead>
+                        `);
+                      },
+                      error: (collection, response, options) => {
+                        console.error('Error fetching tasks:', response);
+                      },
+                    });
+                  },
+                });
+
+
+
+
+
+
+
+                              var header_region = new Marionette.Region({
+                            el: '#header'
+                            });
+
+                          var create_button = new Marionette.Region({
+                            el: '#create_button_region'
+                            });
+                              var option_button = new Marionette.Region({
+                            el: '#option_button_region'
+                            });
+
+                              var table_region = new Marionette.Region({
+                            el: '#table'
+                            });
+
+
+                          MyApp.on('start', function () {
+                                var headerView = new HeaderView();
+                                header_region.show(headerView);
+
+
+
+
+                                        var createTaskLayout = new CreateTaskLayout();
+                                create_button.show(createTaskLayout);
+                                createTaskLayout.on('openCreateTaskModal', function () {
+                                    createTaskLayout.$el.find('#createTaskModal').show();
+                                    createTaskLayout.$el.find('#overlay').show();
+                                });
+
+                                createTaskLayout.on('closeCreateTaskModal', function () {
+                                   createTaskLayout.$el.find('#createTaskModal').hide();
+                    createTaskLayout.$el.find('#overlay').hide();
+                                });
+
+
+
+
+
+
+                                      var taskLayout= new TaskLayout();
+                                        table_region.show(taskLayout);
+
+                            });
+
+                            MyApp.start();
+
+                        </script>
+
+                        </body>
+
+                        </html>
+
+
+
+
